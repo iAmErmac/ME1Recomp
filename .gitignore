@@ -1,0 +1,27 @@
+# An allowlist: everything at the top is ignored except what is named below. Never in this
+# repository: the player's game and anything derived from it (the extracted disc, the code
+# XenonRecomp generates, shader containers, dumps), build trees, captures and screenshots, and
+# development notes.
+/*
+!/.gitignore
+!/.gitattributes
+!/.gitmodules
+!/.github/
+!/LICENSE
+!/NOTICE.md
+!/README.md
+!/ME1Recomp/
+!/XenonRecomp
+!/android/
+!/cmake/
+!/config/
+!/scripts/
+!/tests/
+!/tools/
+
+# Inside the allowed folders.
+__pycache__/
+*.pyc
+*.orig
+/tests/insn/gen/
+/tests/insn/obj/

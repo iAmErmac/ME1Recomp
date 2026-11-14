@@ -1,0 +1,6 @@
+[submodule "XenonRecomp"]
+	path = XenonRecomp
+	url = https://github.com/hedge-dev/XenonRecomp.git
+[submodule "ME1Recomp/thirdparty/SDL"]
+	path = ME1Recomp/thirdparty/SDL
+	url = https://github.com/libsdl-org/SDL.git

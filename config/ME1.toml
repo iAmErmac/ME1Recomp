@@ -1,0 +1,76 @@
+# XenonRecomp config for Mass Effect (X360, title 4D5307E8, media 572BA75D, XEX 0.0.0.5,
+# kernel 2.0.5766, default.xex sha256 4beb5825...). Modeled on DAORecomp's config/DAO.toml.
+# Run from this folder (XenonRecomp prefixes the config's directory to relative paths): the game
+# is extracted to ../../game (next to this checkout) and the code goes to ../../ppc.
+[main]
+file_path = "../../game/default.xex"
+out_directory_path = "../../ppc"
+switch_table_file_path = "ME1_switch_tables.toml"
+
+# Optimizations stay off until the recompilation runs correctly (as DAO).
+skip_lr = false
+skip_msr = false
+ctr_as_local = false
+xer_as_local = false
+reserved_as_local = false
+cr_as_local = false
+non_argument_as_local = false
+non_volatile_as_local = false
+
+# AUTO-FUNCTIONS (scripts/fix_functions.py)
+functions = [
+    { address = 0x8221C1A8, size = 0x234 },
+    { address = 0x82437890, size = 0xC8 },
+    { address = 0x82437958, size = 0xC8 },
+    { address = 0x82437A20, size = 0xC8 },
+    { address = 0x82546058, size = 0xF0 },
+    { address = 0x8258B550, size = 0xF0 },
+    { address = 0x8261D498, size = 0x7C },
+    { address = 0x82695CF0, size = 0x188 },
+    { address = 0x826E8608, size = 0x84 },
+    { address = 0x826F7918, size = 0x80 },
+    { address = 0x82741460, size = 0x74 },
+    { address = 0x8275B760, size = 0x18 },
+    { address = 0x8276B6E0, size = 0x124 },
+    { address = 0x827CEC20, size = 0x2B0 },
+    { address = 0x827F71B0, size = 0x1A4 },
+    { address = 0x82841248, size = 0x114 },
+    { address = 0x8288F530, size = 0x100 },
+    { address = 0x829730C0, size = 0xA0 },
+    { address = 0x829DA298, size = 0x84 },
+    { address = 0x829DA320, size = 0x7C },
+    { address = 0x829DA3A0, size = 0x94 },
+    { address = 0x829DA438, size = 0x60 },
+    { address = 0x82A0C170, size = 0x78 },
+    { address = 0x82A837C8, size = 0x78 },
+    { address = 0x82AD1370, size = 0x68 },
+    { address = 0x82AD13D8, size = 0x64 },
+    { address = 0x82AD1440, size = 0x5C },
+    { address = 0x82AD14A0, size = 0x198 },
+    { address = 0x82AD1638, size = 0x16C },
+    { address = 0x82CCC280, size = 0x188 },
+]
+# END AUTO-FUNCTIONS
+
+# Found by byte pattern (scripts/find_helpers.py), one hit each.
+restgprlr_14_address = 0x82973060
+savegprlr_14_address = 0x82973010
+restfpr_14_address = 0x82974E5C
+savefpr_14_address = 0x82974E10
+restvmx_14_address = 0x82976AD8
+savevmx_14_address = 0x82976840
+restvmx_64_address = 0x82976B6C
+savevmx_64_address = 0x829768D4
+
+# longjmp reloads f14.. from the jmp_buf (lfd f14,0(r7)); setjmp starts with a hook check
+# (lis r4,0x82ED; lwz r0,-0x3204(r4); bnectr) and then stores f14.. (stfd f14,0(r3)).
+longjmp_address = 0x82BE2330
+setjmp_address = 0x82BE2450
+
+invalid_instructions = [
+    { data = 0x00000000, size = 4 }, # padding
+    { data = 0x82BE1840, size = 8 }, # exception-handler record (768 functions)
+    { data = 0x82D7D30C, size = 8 }, # exception-handler record (62 functions)
+    { data = 0x82BE69B0, size = 8 }, # exception-handler record (1 function)
+    { data = 0x00485645, size = 0x194 }, # data block at the end of .text (0x82D7DF90-0x82D7E124), as in DAO
+]
