@@ -3,8 +3,8 @@
 # executable the same way on Windows and Linux hosts, without Visual Studio.
 #
 #   -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake
-#   -DSOD_LLVM_BIN=<dir with clang-cl, lld-link, llvm-lib, llvm-rc>
-#   -DSOD_WINSYSROOT=<xwin splat --use-winsysroot-style output>
+#   -DME1_LLVM_BIN=<dir with clang-cl, lld-link, llvm-lib, llvm-rc>
+#   -DME1_WINSYSROOT=<xwin splat --use-winsysroot-style output>
 #
 # The installer (install.py) sets both.
 

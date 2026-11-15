@@ -37,7 +37,8 @@ option(XDROID360_PROFILE_BUILD "Build only the game profile's libraries (no gene
 if (XDROID360_PROFILE_BUILD)
     set(ME1_PPC_DIR ${ME1_ROOT}/android/profile/inputs)
 else()
-    set(ME1_PPC_DIR ${ME1_ROOT}/ppc)
+    # The generated code: ../ppc next to this checkout (config/ME1.toml writes it there).
+    set(ME1_PPC_DIR ${ME1_ROOT}/../ppc CACHE PATH "XenonRecomp output directory")
 endif()
 set(XENON_ROOT ${ME1_ROOT}/XenonRecomp)
 set(XENON_TP ${XENON_ROOT}/thirdparty)

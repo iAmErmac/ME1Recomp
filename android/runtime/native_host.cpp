@@ -100,9 +100,13 @@ namespace me1::gpu::native
             // constant of type 0; its albedo textures are gamma. config.toml can still override them.
             // Also: its HDR scene resolves to formats other than 8_8_8_8, its D3D Clear carries the
             // clear values in the rectangle's vertices, and it samples the 16-bit EXPAND formats.
+            // (ME1) Mass Effect's HDR copies (2_10_10_10_FLOAT or 16_16_16_16_FLOAT targets to
+            // 16_16_16_16_FLOAT) carry an exponent bias of -3 that its readers don't undo: without
+            // xdroid360_sesgo_copias the title screen was blown out to white on the S25.
             for (const char* name : { "xdroid360_oclusion_acumulada", "xdroid360_alias_edram",
                                       "xdroid360_fetch_tipo_invalido", "xdroid360_texturas_gamma",
-                                      "xdroid360_copias_hdr", "xdroid360_texturas_expand" })
+                                      "xdroid360_copias_hdr", "xdroid360_texturas_expand",
+                                      "xdroid360_sesgo_copias" })
             {
                 if (!rex::cvar::GetFlagInfo(name) || !rex::cvar::SetFlagByName(name, "true"))
                     LOGW("Native renderer setting {}: not set (an older renderer?)", name);

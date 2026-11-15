@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# State of Decay's game profile for the XDroid360 launcher's on-device build (recipe format v2,
+# Mass Effect's game profile for the XDroid360 launcher's on-device build (recipe format v2,
 # the launcher's toolchain/RECIPE_FORMAT_DRAFT.md):
-#   build/out/sod/      recipe.json, lib/, include/, xr/, licenses/
-#   build/out/sod.zip   (PROFILE_OUT: another folder for both)
-# lib/libsod-game.a  the runtime (android/runtime) and the front end (android/app/cpp,
-#                    libsod-frontend.a), linked --whole-archive on the phone
-# lib/libsod-deps.a  every other archive libgame.so links (XenonUtils, Xenia, FFmpeg, ...),
+#   build/out/me1/      recipe.json, lib/, include/, xr/, licenses/
+#   build/out/me1.zip   (PROFILE_OUT: another folder for both)
+# lib/libme1-game.a  the runtime (android/runtime) and the front end (android/app/cpp,
+#                    libme1-frontend.a), linked --whole-archive on the phone
+# lib/libme1-deps.a  every other archive libgame.so links (XenonUtils, Xenia, FFmpeg, ...),
 #                    merged; taken from the build's own link line, so it can't drift
 # Both without debug info (llvm-strip -g); the symbol tables stay for crash traces.
 # licenses/: the license texts of everything in the archives and include/ (INDEX.md).
@@ -35,12 +35,12 @@ if [ -z "${TOOLCHAIN:-}" ]; then
 fi
 export XDROID360_ROOT
 export XR_SRC=${XR_SRC:-$ROOT/XenonRecomp}
-export SDL_SRC=${SDL_SRC:-$ROOT/SoDRecomp/thirdparty/SDL}
+export SDL_SRC=${SDL_SRC:-$ROOT/ME1Recomp/thirdparty/SDL}
 . "$TOOLCHAIN/env.sh"
 ABI_HEADER=$XDROID360_ROOT/android/app/src/main/cpp/dao_abi.h
 XE_TP=$XENIA_CANARY/third_party
 OUT_DIR=${PROFILE_OUT:-$ROOT/build/out}
-OUT=$OUT_DIR/sod
+OUT=$OUT_DIR/me1
 # The first Python that runs (Windows has a python3 that only opens the Store).
 if [ -z "${PYTHON:-}" ]; then
   for PYTHON in python3 python; do "$PYTHON" -c "" 2>/dev/null && break; done
@@ -54,7 +54,7 @@ native() { if command -v cygpath > /dev/null; then cygpath -m "$1"; else printf 
   -DCMAKE_TOOLCHAIN_FILE="$(native "$NDK/build/cmake/android.toolchain.cmake")" \
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 -DCMAKE_BUILD_TYPE=Release \
   -DXDROID360_PROFILE_BUILD=ON -DXDROID360_ROOT="$(native "$XDROID360_ROOT")"
-"$NINJA" -C "$B" game sod-frontend-static
+"$NINJA" -C "$B" game me1-frontend-static
 
 # The archives libgame.so links, from its link command: the runtime goes into the game
 # archive; the generated code (daoppc) and its descriptor (daobuildinfo) are made on the
@@ -82,13 +82,13 @@ merge() {  # merge <out.a> <in.a>...: one archive, via an MRI script (llvm-ar -M
     echo "SAVE"; echo "END"; } | "$NDK_LLVM/bin/llvm-ar$EXE" -M
   "$NDK_LLVM/bin/llvm-strip$EXE" -g "$out"
 }
-merge "$OUT/lib/libsod-game.a" runtime/libdaodroid-runtime.a libsod-frontend.a
-merge "$OUT/lib/libsod-deps.a" "${deps[@]}"
+merge "$OUT/lib/libme1-game.a" runtime/libdaodroid-runtime.a libme1-frontend.a
+merge "$OUT/lib/libme1-deps.a" "${deps[@]}"
 
 # Headers and sources the phone's compile needs (the generated code's forced include, the
 # build descriptor, SIMDe).
-cp "$ROOT/SoDRecomp/SoDRecompLib/mmio_hook.h" "$ROOT/SoDRecomp/SoDRecompLib/build_info.h" \
-   "$ROOT/SoDRecomp/SoDRecompLib/build_info.cpp" "$ROOT/android/runtime/build_info_android.cpp" \
+cp "$ROOT/ME1Recomp/ME1RecompLib/mmio_hook.h" "$ROOT/ME1Recomp/ME1RecompLib/build_info.h" \
+   "$ROOT/ME1Recomp/ME1RecompLib/build_info.cpp" "$ROOT/android/runtime/build_info_android.cpp" \
    "$OUT/include/"
 cp -r "$ROOT/XenonRecomp/thirdparty/simde" "$OUT/include/simde"
 # Only the headers: not the submodule's git link (a .git file) or other dot files.
@@ -99,11 +99,11 @@ find "$OUT/include/simde" -name '.*' -prune -exec rm -rf {} +
 # "(XDroid360)") takes an absolute config path as is; the switch table stays next to the config.
 sed -e 's|^file_path = .*|file_path = "${GAME}/game/default.xex"|' \
     -e 's|^out_directory_path = .*|out_directory_path = "${WORK}/ppc"|' \
-    -e 's|^# Run from this folder.*|# The launcher writes this to ${WORK}/xr/SoD.toml (recipe step xr-config).|' \
-    "$ROOT/config/SoD.toml" > "$OUT/xr/SoD.toml.in"
-grep -q '^file_path = "${GAME}/game/default.xex"$' "$OUT/xr/SoD.toml.in"
-grep -q '^out_directory_path = "${WORK}/ppc"$' "$OUT/xr/SoD.toml.in"
-cp "$ROOT/config/SoD_switch_tables.toml" "$OUT/xr/"
+    -e 's|^# Run from this folder.*|# The launcher writes this to ${WORK}/xr/ME1.toml (recipe step xr-config).|' \
+    "$ROOT/config/ME1.toml" > "$OUT/xr/ME1.toml.in"
+grep -q '^file_path = "${GAME}/game/default.xex"$' "$OUT/xr/ME1.toml.in"
+grep -q '^out_directory_path = "${WORK}/ppc"$' "$OUT/xr/ME1.toml.in"
+cp "$ROOT/config/ME1_switch_tables.toml" "$OUT/xr/"
 cp "$ROOT/XenonRecomp/XenonUtils/ppc_context.h" "$OUT/xr/ppc_context.h"
 
 # LF line endings in xr/ and include/, as CI's Linux checkout has them: the launcher keeps a game's
@@ -149,7 +149,9 @@ canary_commit=$(git -C "$XENIA_CANARY" rev-parse --short=7 HEAD)
 xr_commit=$(git -C "$XR_SRC" rev-parse --short=7 HEAD)
 grep -q 'FFMPEG_LICENSE "LGPL version 2.1 or later"' "$XE_TP/ffmpeg-xenia/config.h" ||
   { echo "FFmpeg isn't configured as LGPL 2.1+ ($XE_TP/ffmpeg-xenia/config.h)" >&2; exit 1; }
-lic SoDRecomp.txt "$ROOT/SoDRecomp/LICENSE"
+lic ME1Recomp-GPL-3.0.txt "$ROOT/LICENSE"
+lic ME1Recomp-NOTICE.md "$ROOT/NOTICE.md"
+lic DAORecomp-SoDRecomp-MIT.txt "$ROOT/ME1Recomp/LICENSE"
 lic Xenia.txt "$XDROID360_ROOT/recomp/xenia/LICENSE"
 lic LGPL-2.1.txt "$XE_TP/FFmpeg/COPYING.LGPLv2.1"
 lic FFmpeg-LICENSE.md "$XE_TP/FFmpeg/LICENSE.md"
@@ -195,41 +197,41 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVE
 OF THE POSSIBILITY OF SUCH DAMAGE.
 EOF
 cat > "$LIC/INDEX.md" <<EOF
-# Licenses: State of Decay's game profile
+# Licenses: Mass Effect's game profile
 
-On the phone, libgame.so is linked from lib/libsod-game.a, lib/libsod-deps.a, the game code
+On the phone, libgame.so is linked from lib/libme1-game.a, lib/libme1-deps.a, the game code
 the launcher generates from the player's own disc, and the launcher's libSDL3.so.
 
 | Component | Where | License | Text | Source |
 |---|---|---|---|---|
-| SoDRecomp (the runtime, front end and build descriptor; based on DAORecomp) | libsod-game.a, include/ | MIT | SoDRecomp.txt | https://github.com/udarmolota/SoDRecomp |
-| Xenia (GPU, UI, base; DAORecomp's vendored copy and XDroid360's xenia-vulkan) | libsod-deps.a | BSD-3-Clause | Xenia.txt | https://github.com/xenia-canary/xenia-canary at $canary_commit; https://github.com/udarmolota/XDroid360 (xenia-vulkan) |
-| FFmpeg $ffmpeg_version (libavcodec, libavutil: the XMA decoder), configured LGPL 2.1 or later | libsod-deps.a | LGPL-2.1-or-later | LGPL-2.1.txt, FFmpeg-LICENSE.md | https://github.com/has207/FFmpeg (branch xmaframes) at $ffmpeg_commit. libsod-deps.a is an object archive: libgame.so is relinked on the phone at every build, and can be relinked with a modified FFmpeg |
-| glslang (SPIR-V builder) | libsod-deps.a | BSD-3-Clause and others (see text) | glslang.txt | https://github.com/KhronosGroup/glslang |
-| Dear ImGui | libsod-deps.a | MIT | imgui.txt | https://github.com/ocornut/imgui |
-| {fmt} | libsod-deps.a | MIT | fmt.txt | https://github.com/fmtlib/fmt |
-| Snappy | libsod-deps.a | BSD-3-Clause | snappy.txt | https://github.com/google/snappy |
-| xxHash | libsod-deps.a | BSD-2-Clause | xxhash.txt | https://github.com/Cyan4973/xxHash |
-| Vulkan Memory Allocator | libsod-deps.a | MIT | VulkanMemoryAllocator.txt | https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator |
-| Vulkan-Headers | libsod-deps.a (headers) | Apache-2.0 / MIT | Vulkan-Headers.md | https://github.com/KhronosGroup/Vulkan-Headers |
-| FidelityFX FSR 1, CAS (shaders) | libsod-deps.a | MIT | FidelityFX-FSR.txt, FidelityFX-CAS.txt | https://github.com/GPUOpen-Effects |
-| XenonUtils (XEX loading) | libsod-deps.a | MIT | XenonRecomp.md | https://github.com/hedge-dev/XenonRecomp at $xr_commit |
-| in XenonUtils: libmspack's lzxd.c | libsod-deps.a | LGPL-2.1 | LGPL-2.1.txt | https://github.com/kyz/libmspack |
-| in XenonUtils: tiny-AES-c, TinySHA1 | libsod-deps.a | Unlicense, ISC-style | tiny-AES-c.txt, TinySHA1.txt | XenonRecomp's thirdparty/ |
-| SIMDe | include/simde, libsod-game.a | MIT | SIMDe.txt | https://github.com/simd-everywhere/simde |
-| liblinkernsbypass | libsod-deps.a | BSD-2-Clause | linkernsbypass.txt | https://github.com/bylaws/liblinkernsbypass |
-| SDL 3 (headers; linked against the launcher's libSDL3.so) | libsod-game.a | Zlib | SDL3.txt | https://github.com/libsdl-org/SDL |
-| The native renderer (XDroid360's port of nfsmw-android's EDRAM-free renderer; off unless config.toml asks for it) | libsod-deps.a | **GPL-3.0**: libgame.so as a whole is GPL-3.0 | native-renderer-GPL-3.0.txt, native-renderer-NOTICE.md | https://github.com/udarmolota/XDroid360 (native-renderer/) |
+| ME1Recomp (the runtime, front end and build descriptor; from SoDRecomp and DAORecomp, whose code keeps its MIT notice) | libme1-game.a, include/ | GPL-3.0 (DAORecomp/SoDRecomp parts MIT) | ME1Recomp-GPL-3.0.txt, ME1Recomp-NOTICE.md, DAORecomp-SoDRecomp-MIT.txt | https://github.com/udarmolota/ME1Recomp |
+| Xenia (GPU, UI, base; DAORecomp's vendored copy and XDroid360's xenia-vulkan) | libme1-deps.a | BSD-3-Clause | Xenia.txt | https://github.com/xenia-canary/xenia-canary at $canary_commit; https://github.com/udarmolota/XDroid360 (xenia-vulkan) |
+| FFmpeg $ffmpeg_version (libavcodec, libavutil: the XMA decoder), configured LGPL 2.1 or later | libme1-deps.a | LGPL-2.1-or-later | LGPL-2.1.txt, FFmpeg-LICENSE.md | https://github.com/has207/FFmpeg (branch xmaframes) at $ffmpeg_commit. libme1-deps.a is an object archive: libgame.so is relinked on the phone at every build, and can be relinked with a modified FFmpeg |
+| glslang (SPIR-V builder) | libme1-deps.a | BSD-3-Clause and others (see text) | glslang.txt | https://github.com/KhronosGroup/glslang |
+| Dear ImGui | libme1-deps.a | MIT | imgui.txt | https://github.com/ocornut/imgui |
+| {fmt} | libme1-deps.a | MIT | fmt.txt | https://github.com/fmtlib/fmt |
+| Snappy | libme1-deps.a | BSD-3-Clause | snappy.txt | https://github.com/google/snappy |
+| xxHash | libme1-deps.a | BSD-2-Clause | xxhash.txt | https://github.com/Cyan4973/xxHash |
+| Vulkan Memory Allocator | libme1-deps.a | MIT | VulkanMemoryAllocator.txt | https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator |
+| Vulkan-Headers | libme1-deps.a (headers) | Apache-2.0 / MIT | Vulkan-Headers.md | https://github.com/KhronosGroup/Vulkan-Headers |
+| FidelityFX FSR 1, CAS (shaders) | libme1-deps.a | MIT | FidelityFX-FSR.txt, FidelityFX-CAS.txt | https://github.com/GPUOpen-Effects |
+| XenonUtils (XEX loading) | libme1-deps.a | MIT | XenonRecomp.md | https://github.com/hedge-dev/XenonRecomp at $xr_commit |
+| in XenonUtils: libmspack's lzxd.c | libme1-deps.a | LGPL-2.1 | LGPL-2.1.txt | https://github.com/kyz/libmspack |
+| in XenonUtils: tiny-AES-c, TinySHA1 | libme1-deps.a | Unlicense, ISC-style | tiny-AES-c.txt, TinySHA1.txt | XenonRecomp's thirdparty/ |
+| SIMDe | include/simde, libme1-game.a | MIT | SIMDe.txt | https://github.com/simd-everywhere/simde |
+| liblinkernsbypass | libme1-deps.a | BSD-2-Clause | linkernsbypass.txt | https://github.com/bylaws/liblinkernsbypass |
+| SDL 3 (headers; linked against the launcher's libSDL3.so) | libme1-game.a | Zlib | SDL3.txt | https://github.com/libsdl-org/SDL |
+| The native renderer (XDroid360's port of nfsmw-android's EDRAM-free renderer; off unless config.toml asks for it) | libme1-deps.a | **GPL-3.0**: libgame.so as a whole is GPL-3.0 | native-renderer-GPL-3.0.txt, native-renderer-NOTICE.md | https://github.com/udarmolota/XDroid360 (native-renderer/) |
 EOF
 
 (cd "$OUT_DIR" && "$PYTHON" -I -c '
 import os, zipfile
-with zipfile.ZipFile("sod.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-    for root, dirs, files in os.walk("sod"):
+with zipfile.ZipFile("me1.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for root, dirs, files in os.walk("me1"):
         dirs.sort()
         for f in sorted(files):
             p = os.path.join(root, f)
-            z.write(p, os.path.relpath(p, "sod").replace(os.sep, "/"))
+            z.write(p, os.path.relpath(p, "me1").replace(os.sep, "/"))
 ')
 
 echo "deps: ${deps[*]}"

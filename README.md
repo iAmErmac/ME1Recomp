@@ -16,7 +16,12 @@ is never committed.
 Early work.
 - The PC build (Xenia's Direct3D 12 GPU) starts the game and reaches the title screen, the main
   menu and character creation.
-- Android and XDroid360's native renderer: not started yet.
+- Android, with XDroid360's native (EDRAM-free) renderer, in a development build: the intro videos,
+  the menus with their text and character creation render on a Galaxy S25 at the game's 30 fps.
+  The game hooks are in `ME1Recomp/ME1Recomp/gpu/native_hooks.cpp`: the Direct3D draws and shader
+  objects; the shaders Direct3D and Scaleform build at run time, saved to
+  `userdata/runtime_shaders` for the shader library; 2x MSAA with predicated tiling turned off.
+  The launcher's game profile (`android/profile`) is not in XDroid360 yet.
 - The supported program is `default.xex` XEX 0.0.0.5 (media 572BA75D),
   SHA-256 `4beb582540010b25032e3a51e4ce84a6fb1a9f381adddd8b2def0dc5d6bf715d`. Another edition's
   `default.xex` is a different program and needs its own configuration.
