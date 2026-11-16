@@ -495,3 +495,32 @@ static void SceneTilesHook(PPCContext& ctx, uint8_t* base, PPCFunc* original)
     }
 }
 // Removed for SoD (Dragon Age: Origins addresses): GAME_HOOK(sub_82661640, tu6_sub_826955E8, SceneTilesHook)
+
+// (ME1) D3D's GetData for an occlusion query (type 9): the game asks whether a primitive was visible.
+// The query object (r3) holds the device at +0 and the type at +4; r4 is the DWORD the sample count
+// goes to; S_OK (0) means the count is final. The report is "ready" once any of the first four words
+// at the END record (base + 0) has lost D3D's 0xFFFFFEED mark, and the count is ZPass(base + 0) -
+// ZPass(base + 32). That read races the GPU in both renderers: when the ring lags and Unreal reuses a
+// query, BEGIN N+1's mark is overwritten by END N's report, or a report is read between its stores,
+// and the difference comes out 0 or negative. The primitive is then culled for one frame: whole
+// meshes vanished for single frames (the title screen's globe on the PC, Shepard's head in the
+// cinematics on the S25). Here every occlusion query is visible at once, as masseffect-nx does
+// (masseffect_query_getdata_visible); the game's occlusion culling is off as a result. Other query
+// types go to D3D.
+namespace
+{
+    constexpr uint32_t kOcclusionQuery = 9;
+    constexpr uint32_t kVisibleSamples = 1000;
+
+    void QueryGetDataHook(PPCContext& ctx, uint8_t* base, PPCFunc* original)
+    {
+        if (PPC_LOAD_U32(ctx.r3.u32 + 4) != kOcclusionQuery || ctx.r4.u32 == 0)
+        {
+            original(ctx, base);
+            return;
+        }
+        PPC_STORE_U32(ctx.r4.u32, kVisibleSamples);
+        ctx.r3.u64 = 0;
+    }
+}
+GAME_HOOK_ONE(sub_82228F48, QueryGetDataHook)

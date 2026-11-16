@@ -103,10 +103,14 @@ namespace me1::gpu::native
             // (ME1) Mass Effect's HDR copies (2_10_10_10_FLOAT or 16_16_16_16_FLOAT targets to
             // 16_16_16_16_FLOAT) carry an exponent bias of -3 that its readers don't undo: without
             // xdroid360_sesgo_copias the title screen was blown out to white on the S25.
+            // (ME1) Its depth-of-field/bloom quarter image is read at a smaller size than the copy
+            // (328x182): xdroid360_tamano_por_fetch sizes a resolved texture by what the game's fetch
+            // constant declares. Without it the blurred copy was stretched over the scene (a shifted,
+            // translucent ghost of near objects in the cinematics).
             for (const char* name : { "xdroid360_oclusion_acumulada", "xdroid360_alias_edram",
                                       "xdroid360_fetch_tipo_invalido", "xdroid360_texturas_gamma",
                                       "xdroid360_copias_hdr", "xdroid360_texturas_expand",
-                                      "xdroid360_sesgo_copias" })
+                                      "xdroid360_sesgo_copias", "xdroid360_tamano_por_fetch" })
             {
                 if (!rex::cvar::GetFlagInfo(name) || !rex::cvar::SetFlagByName(name, "true"))
                     LOGW("Native renderer setting {}: not set (an older renderer?)", name);

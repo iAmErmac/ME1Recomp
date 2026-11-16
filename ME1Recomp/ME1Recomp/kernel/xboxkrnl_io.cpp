@@ -220,10 +220,14 @@ namespace me1::imp
         return X_STATUS_SUCCESS;
     }
 
+    // (ME1) NtOpenFile(handle, access, attributes, iosb, share access, open options): the share access
+    // comes before the options, as XAPI calls it (e.g. MoveFile: share 7, options 0x4020). Taking the
+    // share access (7) for the options set FILE_DIRECTORY_FILE, so opening a file failed with
+    // STATUS_NOT_A_DIRECTORY: Mass Effect could never rename its Save_*.tmp to the .sav it loads.
     uint32_t NtOpenFile(u32* handleOut, uint32_t access, X_OBJECT_ATTRIBUTES* attributes, X_IO_STATUS_BLOCK* iosb,
-        uint32_t options)
+        uint32_t shareAccess, uint32_t options)
     {
-        return NtCreateFile(handleOut, access, attributes, iosb, nullptr, 0, 0, Disposition::Open, options);
+        return NtCreateFile(handleOut, access, attributes, iosb, nullptr, 0, shareAccess, Disposition::Open, options);
     }
 
     // Completes an I/O request: status block, event, APC.
@@ -564,10 +568,29 @@ namespace me1::imp
                 break;
             }
             const auto* ansi = reinterpret_cast<X_ANSI_STRING*>(info + 8);
-            auto target = VfsResolve(AnsiString(ansi));
+            // (ME1) FILE_RENAME_INFORMATION's RootDirectory (after ReplaceIfExists) makes the new name
+            // relative to that directory, and a bare name (no device, no backslash) is a sibling of the
+            // file. Mass Effect writes its saves as Save_player_N_00.tmp and renames them so; with only
+            // full paths resolved, the rename failed silently and every save stayed a .tmp the game
+            // can't load.
+            std::string name = AnsiString(ansi);
+            const uint32_t root = *reinterpret_cast<const u32*>(info + 4);
+            if (root && root != 0xFFFFFFFD)
+            {
+                if (auto dir = LookupHandle<File>(root, ObjectType::File))
+                    name = dir->guestPath + "\\" + name;
+            }
+            else if (name.find('\\') == std::string::npos && name.find(':') == std::string::npos)
+            {
+                const size_t slash = file->guestPath.find_last_of('\\');
+                if (slash != std::string::npos)
+                    name = file->guestPath.substr(0, slash + 1) + name;
+            }
+            auto target = VfsResolve(name);
             std::error_code ec;
             if (!target)
             {
+                LOGW("NtSetInformationFile: rename of '{}' to '{}': no such path", file->guestPath, name);
                 status = X_STATUS_OBJECT_PATH_NOT_FOUND;
                 break;
             }
@@ -585,9 +608,15 @@ namespace me1::imp
             }
             fs::rename(file->hostPath, *target, ec);
             if (ec)
+            {
+                LOGW("NtSetInformationFile: rename of '{}' to '{}' failed: {}", file->guestPath, name, ec.message());
                 status = X_STATUS_ACCESS_DENIED;
+            }
             else
+            {
                 file->hostPath = *target;
+                file->guestPath = name;
+            }
             if (!file->isDirectory)
             {
                 uint32_t error = 0;
