@@ -9,7 +9,10 @@ runtime (kernel, XAM, audio, GPU front end) comes from
 
 **This repository holds no game code or data.** The game is the player's own copy: the disc's
 `default.xex` is recompiled on the player's machine, and the code XenonRecomp generates from it
-is never committed.
+is never committed. One exception: `android/profile/runtime_shaders` holds the 57 shaders the
+game's Direct3D and Scaleform build at run time (64 KB, as the game's hook saved them on a phone).
+No file on the disc holds them, and without them the launcher's first build of the shader library
+leaves the menus without text until a first run and "Update game".
 
 ## Status
 

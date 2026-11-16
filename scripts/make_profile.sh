@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Mass Effect's game profile for the XDroid360 launcher's on-device build (recipe format v2,
 # the launcher's toolchain/RECIPE_FORMAT_DRAFT.md):
-#   build/out/me1/      recipe.json, lib/, include/, xr/, licenses/
+#   build/out/me1/      recipe.json, lib/, include/, xr/, runtime_shaders/, licenses/
 #   build/out/me1.zip   (PROFILE_OUT: another folder for both)
 # lib/libme1-game.a  the runtime (android/runtime) and the front end (android/app/cpp,
 #                    libme1-frontend.a), linked --whole-archive on the phone
@@ -105,6 +105,11 @@ grep -q '^file_path = "${GAME}/game/default.xex"$' "$OUT/xr/ME1.toml.in"
 grep -q '^out_directory_path = "${WORK}/ppc"$' "$OUT/xr/ME1.toml.in"
 cp "$ROOT/config/ME1_switch_tables.toml" "$OUT/xr/"
 cp "$ROOT/XenonRecomp/XenonUtils/ppc_context.h" "$OUT/xr/ppc_context.h"
+# The shaders the game builds at run time (its D3D and Scaleform ones), as its hook wrote them on
+# a phone: the recipe's shaders step adds them, so the first run already has a complete library
+# (without them the menus had no text until "Update game" after a first run).
+mkdir -p "$OUT/runtime_shaders"
+cp "$ROOT"/android/profile/runtime_shaders/*.bin "$OUT/runtime_shaders/"
 
 # LF line endings in xr/ and include/, as CI's Linux checkout has them: the launcher keeps a game's
 # compiled code across an Update game only while these files are byte-identical, and a Windows
