@@ -355,7 +355,9 @@ static void SwapInterruptHook(PPCContext& ctx, uint8_t* base, PPCFunc* original)
 }
 // (SoD) The same D3D handler in SoD's XDK, instruction for instruction (DAO's was sub_82CD4218).
 // SoD presents with interval 1 already: its 30 fps cap is the engine's limiter below.
-// (ME1) State of Decay address, off until ME1's is found: GAME_HOOK_ONE(sub_8376F410, SwapInterruptHook)
+// (ME1) The same handler in ME1's XDK, instruction for instruction. ME1 presents its 3D with
+// interval 2 like DAO, so this is what lifts its 30 fps lock.
+GAME_HOOK_ONE(sub_82233730, SwapInterruptHook)
 
 // (SoD) CryEngine's frame limiter (sub_830D0FF0, on the render thread). With sys_MaxFPS set
 // (30 on the console, from the game's own config) it waits until int(1000 / (sys_MaxFPS + 0.5))
