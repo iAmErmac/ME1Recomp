@@ -25,6 +25,3 @@ __pycache__/
 *.orig
 /tests/insn/gen/
 /tests/insn/obj/
-
-# Generated from the player's game (the profile build's inputs): local only.
-/android/profile/inputs/

@@ -1,0 +1,123 @@
+name: Game profile
+
+# Builds Mass Effect's game profile for the XDroid360 launcher on Linux, with no game: the
+# runtime and front end built with XDROID360_PROFILE_BUILD against the committed profile
+# inputs (android/profile/inputs), NDK 27.3 and the XDroid360 commit pinned in
+# android/profile/build-inputs.json (its toolchain/env.sh names the NDK and the tool versions
+# recipe.json pins). A tag profile-me1-<n> (matching recipe.json's version, me1-<n>) publishes
+# a release with:
+#   xdroid360-profile-me1-<n>.zip  the profile (recipe.json, libme1-game.a, libme1-deps.a,
+#                                  include/, xr/, licenses/)
+#   recipe.json                    loose
+#   SHA256SUMS                     sha256sum of the others
+# Other pushes build the same and keep it as a workflow artifact.
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'profile-me1-*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CMAKE: cmake
+      NINJA: ninja
+      XDROID360_ROOT: ${{ github.workspace }}/_deps/XDroid360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Read the pinned XDroid360 commit
+        id: pins
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          p = json.load(open("android/profile/build-inputs.json"))["xdroid360"]
+          print(f"repo={p['repo']}")
+          print(f"commit={p['commit']}")
+          EOF
+
+      - name: Checkout XDroid360
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.pins.outputs.repo }}
+          ref: ${{ steps.pins.outputs.commit }}
+          path: _deps/XDroid360
+          submodules: true
+
+      - name: Check the XDroid360 commit
+        run: |
+          test -f "$XDROID360_ROOT/toolchain/env.sh" ||
+            { echo "XDroid360 ${{ steps.pins.outputs.commit }} has no toolchain/env.sh: pin a commit that has it"; exit 1; }
+
+      # The runner's Ubuntu mirrors sometimes fail to resolve ("Temporary failure resolving
+      # 'azure.archive.ubuntu.com'"): three tries a minute apart, then Ninja from PyPI.
+      - name: Install Ninja
+        run: |
+          for attempt in 1 2 3; do
+            if sudo apt-get update -q && sudo apt-get install -y -q ninja-build; then
+              break
+            fi
+            echo "apt attempt $attempt failed"
+            sleep 60
+          done
+          if ! command -v ninja > /dev/null; then
+            pipx install ninja || python3 -m pip install --user --break-system-packages ninja
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          ninja --version
+
+      - name: Install NDK 27.3.13750724
+        run: |
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "ndk;27.3.13750724" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.3.13750724" >> "$GITHUB_ENV"
+
+      - name: Fetch the build's sources
+        run: python3 -I scripts/fetch_build_sources.py
+
+      - name: Patch XenonRecomp
+        run: |
+          python3 -I scripts/patch_xenonrecomp.py
+          python3 -I scripts/patch_xenonrecomp_me1.py
+
+      - name: Build the profile
+        env:
+          PROFILE_OUT: ${{ github.workspace }}/build/out
+        run: |
+          bash scripts/make_profile.sh
+          VERSION=$(python3 -c 'import json;print(json.load(open("build/out/me1/recipe.json"))["version"])')
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mkdir -p dist
+          cp build/out/me1.zip "dist/xdroid360-profile-$VERSION.zip"
+          cp build/out/me1/recipe.json dist/recipe.json
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+
+      - name: Keep the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-${{ env.VERSION }}-${{ github.sha }}
+          path: dist/
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/profile-')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF_NAME" = "profile-$VERSION" ||
+            { echo "tag $GITHUB_REF_NAME doesn't match recipe.json's version $VERSION"; exit 1; }
+          cat > notes.md <<EOF
+          Mass Effect's game profile $VERSION for the XDroid360 launcher, built by this workflow with no game,
+          against ${{ steps.pins.outputs.repo }}@${{ steps.pins.outputs.commit }} (its toolchain/env.sh: NDK and tool versions).
+          licenses/INDEX.md in the zip lists every component it carries, with its licence and source.
+
+          Verify the assets with SHA256SUMS.
+          EOF
+          gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md

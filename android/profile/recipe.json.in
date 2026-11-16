@@ -4,7 +4,7 @@
   "game": { "id": "me1", "title": "Mass Effect", "title_ids": ["4D5307E8"] },
   "source": { "formats": ["xiso"], "pick": "file" },
   "requires": { "kit": 1, "abi": @ABI@, "tools": { "clang": "@CLANG@", "xenonrecomp": "@XENONRECOMP@" } },
-  "space": { "game_mb": 7300, "work_mb": 900, "install_mb": 400 },
+  "space": { "game_mb": 8100, "work_mb": 900, "install_mb": 400 },
   "inputs": {
     "xex": { "path": "${GAME}/game/default.xex", "sha256": ["@XEX_SHA256@"] }
   },
@@ -34,6 +34,11 @@
     { "id": "check-xex", "kind": "verify", "label": "Checking game version", "weight": 1,
       "files": { "${GAME}/game/default.xex": ["@XEX_SHA256@"] },
       "message": "unsupported_game_version" },
+    { "id": "shaders", "kind": "run", "label": "Translating shaders", "weight": 150,
+      "tool": "shaderlib", "rerun": true, "creates": ["${GAME}/userdata"],
+      "args": ["${GAME}/game", "${GAME}/userdata/nfsmw_shaders.nfsp", "-j", "${JOBS}",
+               "--add", "${GAME}/userdata/runtime_shaders"],
+      "progress": "progress ([0-9]+)/([0-9]+)" },
     { "id": "xr-config", "kind": "write", "weight": 0,
       "path": "${WORK}/xr/ME1.toml", "from": "${PROFILE}/xr/ME1.toml.in",
       "creates": ["${WORK}/xr"] },
