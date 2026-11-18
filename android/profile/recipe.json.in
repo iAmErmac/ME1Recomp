@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "me1-3",
+  "version": "me1-4",
   "game": { "id": "me1", "title": "Mass Effect", "title_ids": ["4D5307E8"] },
   "source": { "formats": ["xiso"], "pick": "file" },
   "requires": { "kit": 1, "abi": @ABI@, "tools": { "clang": "@CLANG@", "xenonrecomp": "@XENONRECOMP@" } },

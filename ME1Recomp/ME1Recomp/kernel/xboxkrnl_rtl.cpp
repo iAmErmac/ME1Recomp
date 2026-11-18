@@ -436,9 +436,41 @@ namespace me1::imp
         LOGW("DbgBreakPoint");
     }
 
+    // Where the game stopped itself: the guest's return address and its callers, from the stack's
+    // back chain (each frame's word 0 is the caller's frame; the caller's return address is saved
+    // 8 bytes below that frame). The CRT's fatal paths (_amsg_exit, _exit, invalid parameter)
+    // all end in KeBugCheck, so the callers name the error the game hit.
+    static void LogGuestCallers()
+    {
+        PPCContext* ctx = CurrentContext();
+        if (!ctx)
+            return;
+        LOGE("  guest lr {:08X} r1 {:08X} r29 {:08X} r30 {:08X} r31 {:08X}", uint32_t(ctx->lr), ctx->r1.u32,
+            ctx->r29.u32, ctx->r30.u32, ctx->r31.u32);
+        constexpr uint32_t kStackLow = 0x70000000, kStackHigh = 0x80000000;
+        constexpr uint32_t kCodeLow = 0x82000000, kCodeHigh = 0x84000000;
+        std::string chain;
+        uint32_t frame = ctx->r1.u32;
+        for (int i = 0; i < 24; i++)
+        {
+            if (frame < kStackLow || frame >= kStackHigh || (frame & 3))
+                break;
+            const uint32_t back = *g_memory.Translate<be<uint32_t>>(frame);
+            if (back <= frame || back >= kStackHigh || back - frame > 0x100000 || (back & 3))
+                break;
+            const uint32_t lr = *g_memory.Translate<be<uint32_t>>(back - 8);
+            chain += fmt::format(" {:08X}", lr);
+            if (lr < kCodeLow || lr >= kCodeHigh)
+                break;
+            frame = back;
+        }
+        LOGE("  guest callers:{}", chain);
+    }
+
     [[noreturn]] static void BugCheck(uint32_t code, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
     {
         LOGE("KeBugCheck {:08X} ({:08X}, {:08X}, {:08X}, {:08X})", code, a, b, c, d);
+        LogGuestCallers();
         if (IsDebuggerPresent())
             __debugbreak();
         TerminateProcess(GetCurrentProcess(), 0xBC000000 | (code & 0xFFFF));
